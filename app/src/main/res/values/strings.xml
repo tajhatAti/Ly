@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lyrics Overlay</string>
+    <string name="start_overlay">Start floating lyrics</string>
+    <string name="stop_overlay">Stop overlay</string>
+    <string name="permission_needed">Overlay permission: not granted</string>
+    <string name="permission_granted">Overlay permission: granted</string>
+    <string name="service_running">Service: running</string>
+    <string name="service_stopped">Service: stopped</string>
+    <string name="overlay_denied">Display over other apps is required</string>
+    <string name="overlay_started">Lyrics overlay started</string>
+    <string name="channel_name">Lyrics overlay</string>
+    <string name="notif_title">Lyrics overlay is on</string>
+    <string name="notif_text">Tap to open · Stop from notification</string>
+    <string name="stop">Stop</string>
+</resources>
