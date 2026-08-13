@@ -2,19 +2,16 @@ package com.ahad.lyricsoverlay
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.graphics.Color
 import android.graphics.Typeface
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import java.util.concurrent.CopyOnWriteArrayList
 
 class AppSettings private constructor(context: Context) {
 
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(NAME, Context.MODE_PRIVATE)
 
-    private val _live = MutableLiveData(snapshot())
-    val live: LiveData<Snap> = _live
+    private val listeners = CopyOnWriteArrayList<(Snap) -> Unit>()
 
     data class Snap(
         val grid: Boolean,
@@ -74,9 +71,20 @@ class AppSettings private constructor(context: Context) {
 
     fun snapshot(): Snap = Snap(grid, gridSpan, accent, night, cardStyle, sort, font)
 
+    fun addListener(l: (Snap) -> Unit) {
+        listeners.add(l)
+    }
+
+    fun removeListener(l: (Snap) -> Unit) {
+        listeners.remove(l)
+    }
+
     private fun put(block: SharedPreferences.Editor.() -> Unit) {
-        prefs.edit().apply(block).apply()
-        _live.postValue(snapshot())
+        val editor = prefs.edit()
+        editor.block()
+        editor.apply()
+        val snap = snapshot()
+        listeners.forEach { it.invoke(snap) }
     }
 
     companion object {
@@ -119,14 +127,13 @@ class AppSettings private constructor(context: Context) {
             0xFFEA80FC.toInt()
         )
 
-        @Volatile private var inst: AppSettings? = null
+        @Volatile
+        private var inst: AppSettings? = null
 
         fun init(context: Context): AppSettings {
             return inst ?: synchronized(this) {
                 inst ?: AppSettings(context).also { inst = it }
             }
         }
-
-        fun get(): AppSettings = inst ?: error("AppSettings.init not called")
     }
 }

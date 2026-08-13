@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     private var rawSongs: List<Song> = emptyList()
     private var seekUser = false
     private var lastSnap: AppSettings.Snap? = null
+    private lateinit var uiListener: (AppSettings.Snap) -> Unit
 
     private val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_AUDIO
@@ -85,10 +86,11 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        settings.live.observe(this) { snap ->
+        uiListener = { snap ->
             applyChrome(snap, animate = lastSnap != null)
             lastSnap = snap
         }
+        settings.addListener(uiListener)
 
         if (hasStorage()) loadLibrary() else {
             binding.empty.visibility = View.VISIBLE
@@ -107,6 +109,11 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         PlayerState.removeListener(onPlayer)
         super.onPause()
+    }
+
+    override fun onDestroy() {
+        if (this::uiListener.isInitialized) settings.removeListener(uiListener)
+        super.onDestroy()
     }
 
     private fun applyChrome(snap: AppSettings.Snap, animate: Boolean) {
@@ -149,9 +156,8 @@ class MainActivity : AppCompatActivity() {
         binding.includeMini.seekBar.progressTintList = ColorStateList.valueOf(accent)
         binding.includeMini.seekBar.thumbTintList = ColorStateList.valueOf(accent)
         val cardTint = ColorUtils.setAlphaComponent(accent, 40)
-        binding.includeMini.root.setCardBackgroundColor(
-            ColorUtils.compositeColors(cardTint, ContextCompat.getColor(this, R.color.mini))
-        )
+        val miniBg = ColorUtils.compositeColors(cardTint, ContextCompat.getColor(this, R.color.mini))
+        binding.includeMini.root.setBackgroundColor(miniBg)
     }
 
     private fun hasStorage(): Boolean {
