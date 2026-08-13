@@ -30,9 +30,9 @@ object NowPlaying {
             ?: sessions.firstOrNull()
             ?: return null
         val meta = controller.metadata ?: return null
-        val title = meta.string(MediaMetadata.METADATA_KEY_TITLE).orEmpty()
-        val artist = meta.string(MediaMetadata.METADATA_KEY_ARTIST)
-            ?: meta.string(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
+        val title = meta.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty()
+        val artist = meta.getString(MediaMetadata.METADATA_KEY_ARTIST)
+            ?: meta.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
             ?: ""
         if (title.isBlank()) return null
         val state = controller.playbackState
