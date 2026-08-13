@@ -1,5 +1,6 @@
 package com.ahad.lyricsoverlay
 
+import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -17,26 +18,38 @@ class MainActivity : AppCompatActivity() {
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
-        if (Settings.canDrawOverlays(this)) {
+        if (Settings.canDrawOverlays(this) && hasNotificationAccess()) {
             startOverlayService()
         } else {
-            Toast.makeText(this, getString(R.string.overlay_denied), Toast.LENGTH_LONG).show()
+            updateStatus()
         }
+    }
+
+    private val notificationAccessLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (Settings.canDrawOverlays(this) && hasNotificationAccess()) {
+            startOverlayService()
+        }
+        updateStatus()
     }
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* overlay still works without notifications on older devices */ }
+    ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        requestNotificationPermission()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
         updateStatus()
 
-        binding.btnStart.setOnClickListener { ensureOverlayAndStart() }
+        binding.btnNotificationAccess.setOnClickListener { openNotificationAccess() }
+        binding.btnStart.setOnClickListener { ensureAndStart() }
         binding.btnStop.setOnClickListener { stopOverlayService() }
     }
 
@@ -45,22 +58,36 @@ class MainActivity : AppCompatActivity() {
         updateStatus()
     }
 
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+    private fun ensureAndStart() {
+        if (!Settings.canDrawOverlays(this)) {
+            overlayPermissionLauncher.launch(
+                Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+            )
+            return
         }
+        if (!hasNotificationAccess()) {
+            Toast.makeText(this, getString(R.string.need_notification_access), Toast.LENGTH_LONG).show()
+            openNotificationAccess()
+            return
+        }
+        startOverlayService()
     }
 
-    private fun ensureOverlayAndStart() {
-        if (Settings.canDrawOverlays(this)) {
-            startOverlayService()
-        } else {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName")
-            )
-            overlayPermissionLauncher.launch(intent)
-        }
+    private fun openNotificationAccess() {
+        notificationAccessLauncher.launch(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+    }
+
+    private fun hasNotificationAccess(): Boolean {
+        val enabled = Settings.Secure.getString(
+            contentResolver,
+            "enabled_notification_listeners"
+        ) ?: return false
+        val me = ComponentName(this, MediaNotificationListener::class.java).flattenToString()
+        val shortName = ComponentName(this, MediaNotificationListener::class.java).flattenToShortString()
+        return enabled.split(':').any { it == me || it == shortName }
     }
 
     private fun startOverlayService() {
@@ -77,19 +104,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun stopOverlayService() {
-        val intent = Intent(this, LyricsOverlayService::class.java).apply {
-            action = LyricsOverlayService.ACTION_STOP
-        }
-        startService(intent)
+        startService(
+            Intent(this, LyricsOverlayService::class.java).setAction(LyricsOverlayService.ACTION_STOP)
+        )
         updateStatus()
     }
 
     private fun updateStatus() {
-        val overlayOk = Settings.canDrawOverlays(this)
-        binding.tvPermissionStatus.text = if (overlayOk) {
+        binding.tvPermissionStatus.text = if (Settings.canDrawOverlays(this)) {
             getString(R.string.permission_granted)
         } else {
             getString(R.string.permission_needed)
+        }
+        binding.tvNotificationStatus.text = if (hasNotificationAccess()) {
+            getString(R.string.notif_access_granted)
+        } else {
+            getString(R.string.notif_access_needed)
         }
         binding.tvServiceStatus.text = if (LyricsOverlayService.isRunning) {
             getString(R.string.service_running)

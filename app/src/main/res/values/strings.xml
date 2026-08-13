@@ -13,4 +13,11 @@
     <string name="notif_title">Lyrics overlay is on</string>
     <string name="notif_text">Tap to open · Stop from notification</string>
     <string name="stop">Stop</string>
+    <string name="grant_notification_access">Allow notification access (for song title)</string>
+    <string name="notif_access_needed">Notification access: needed to read Spotify/YT Music</string>
+    <string name="notif_access_granted">Notification access: granted</string>
+    <string name="need_notification_access">Turn on Lyrics Overlay in Notification access</string>
+    <string name="waiting_music">Play a song in Spotify / YouTube Music…</string>
+    <string name="loading_lyrics">Loading lyrics: %1$s</string>
+    <string name="lyrics_not_found">No lyrics found for %1$s</string>
 </resources>

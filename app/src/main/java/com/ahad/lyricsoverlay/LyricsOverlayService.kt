@@ -19,6 +19,7 @@ import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
+import kotlin.concurrent.thread
 
 class LyricsOverlayService : Service() {
 
@@ -28,15 +29,11 @@ class LyricsOverlayService : Service() {
     private var lineView: TextView? = null
 
     private val handler = Handler(Looper.getMainLooper())
-    private var lineIndex = 0
-
-    private val lyrics = listOf(
-        "Floating lyrics over every app",
-        "WindowManager TYPE_APPLICATION_OVERLAY",
-        "Fade, scale, and color on each line",
-        "Foreground service keeps it alive",
-        "Drag me anywhere on the screen"
-    )
+    private var lastKey: String? = null
+    private var lines: List<LyricLine> = emptyList()
+    private var lastShownText: String? = null
+    private var colorIndex = 0
+    private var fetchGeneration = 0
 
     private val lineColors = intArrayOf(
         0xFFFF6B9D.toInt(),
@@ -48,8 +45,8 @@ class LyricsOverlayService : Service() {
 
     private val tick = object : Runnable {
         override fun run() {
-            showNextLine()
-            handler.postDelayed(this, LINE_INTERVAL_MS)
+            syncNowPlaying()
+            handler.postDelayed(this, TICK_MS)
         }
     }
 
@@ -93,14 +90,10 @@ class LyricsOverlayService : Service() {
         }
 
         val openApp = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE
+            this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
         )
         val stop = PendingIntent.getService(
-            this,
-            1,
+            this, 1,
             Intent(this, LyricsOverlayService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_IMMUTABLE
         )
@@ -144,7 +137,7 @@ class LyricsOverlayService : Service() {
 
         enableDrag()
         windowManager?.addView(overlayView, params)
-        showNextLine()
+        setLine(getString(R.string.waiting_music), animate = false)
     }
 
     private fun enableDrag() {
@@ -174,17 +167,69 @@ class LyricsOverlayService : Service() {
         }
     }
 
-    private fun showNextLine() {
-        val tv = lineView ?: return
-        val text = lyrics[lineIndex % lyrics.size]
-        val color = lineColors[lineIndex % lineColors.size]
-        lineIndex++
+    private fun syncNowPlaying() {
+        val track = NowPlaying.read(this)
+        if (track == null) {
+            if (lastKey != null) {
+                lastKey = null
+                lines = emptyList()
+                setLine(getString(R.string.waiting_music), animate = true)
+            }
+            return
+        }
+        if (track.key != lastKey) {
+            lastKey = track.key
+            lines = emptyList()
+            setLine(getString(R.string.loading_lyrics, track.title), animate = true)
+            fetchLyrics(track)
+            return
+        }
+        if (lines.isEmpty()) return
+        val current = LrcParser.lineAt(lines, track.positionMs) ?: return
+        setLine(current.text, animate = true)
+    }
 
+    private fun fetchLyrics(track: TrackInfo) {
+        val gen = ++fetchGeneration
+        thread(name = "lrclib") {
+            val result = try {
+                LrclibClient.fetch(track.title, track.artist, track.durationMs)
+            } catch (_: Exception) {
+                null
+            }
+            handler.post {
+                if (gen != fetchGeneration || track.key != lastKey) return@post
+                if (result == null) {
+                    lines = emptyList()
+                    setLine(getString(R.string.lyrics_not_found, track.title), animate = true)
+                } else {
+                    lines = result.second
+                    setLine(result.first, animate = true)
+                }
+            }
+        }
+    }
+
+    private fun setLine(text: String, animate: Boolean) {
+        val tv = lineView ?: return
+        if (text == lastShownText) return
+        lastShownText = text
+        val color = lineColors[colorIndex % lineColors.size]
+        colorIndex++
+        if (!animate) {
+            tv.animate().cancel()
+            tv.alpha = 1f
+            tv.scaleX = 1f
+            tv.scaleY = 1f
+            tv.text = text
+            tv.setTextColor(color)
+            return
+        }
         tv.animate()
             .alpha(0f)
             .scaleX(0.85f)
             .scaleY(0.85f)
-            .setDuration(180)
+            .setDuration(160)
             .setInterpolator(AccelerateDecelerateInterpolator())
             .withEndAction {
                 tv.text = text
@@ -193,7 +238,7 @@ class LyricsOverlayService : Service() {
                     .alpha(1f)
                     .scaleX(1f)
                     .scaleY(1f)
-                    .setDuration(260)
+                    .setDuration(220)
                     .setInterpolator(AccelerateDecelerateInterpolator())
                     .start()
             }
@@ -216,7 +261,7 @@ class LyricsOverlayService : Service() {
         const val ACTION_START = "com.ahad.lyricsoverlay.START"
         const val ACTION_STOP = "com.ahad.lyricsoverlay.STOP"
         private const val NOTIFICATION_ID = 42
-        private const val LINE_INTERVAL_MS = 2800L
+        private const val TICK_MS = 350L
 
         @Volatile
         var isRunning: Boolean = false
