@@ -73,17 +73,12 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                permLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS, storagePermission))
-            }
-        }
-
-        if (hasStorage()) loadLibrary() else {
+        if (hasStorage()) {
+            loadLibrary()
+        } else {
             binding.empty.visibility = View.VISIBLE
             binding.btnGrant.visibility = View.VISIBLE
+            requestPerms()
         }
     }
 
@@ -128,8 +123,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun maybeStartOverlay() {
         if (!Settings.canDrawOverlays(this)) return
-        val i = Intent(this, OverlayService::class.java).setAction(OverlayService.ACTION_SYNC)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(i) else startService(i)
+        if (PlayerState.song != null) {
+            sendPlayer(PlayerService.ACTION_RESUME)
+        }
     }
 
     private fun loadLibrary() {

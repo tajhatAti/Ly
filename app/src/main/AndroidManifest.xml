@@ -42,9 +42,6 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
-        <service
-            android:name=".OverlayService"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
+
     </application>
 </manifest>

@@ -9,8 +9,9 @@ object LyricsRepository {
     fun load(context: Context, song: Song): List<LyricLine> {
         val cached = cacheFile(context, song)
         if (cached.exists()) {
-            val lines = LrcParser.parse(cached.readText())
+            val lines = LrclibClient.toLines(cached.readText())
             if (lines.isNotEmpty()) return lines
+            cached.delete()
         }
 
         val online = try {
@@ -19,21 +20,26 @@ object LyricsRepository {
             null
         }
         if (!online.isNullOrBlank()) {
-            try {
-                cached.writeText(online)
-            } catch (_: Exception) {
+            val lines = LrclibClient.toLines(online)
+            if (lines.isNotEmpty()) {
+                try {
+                    cached.writeText(online)
+                } catch (_: Exception) {
+                }
+                return lines
             }
-            val lines = LrcParser.parse(online)
-            if (lines.isNotEmpty()) return lines
         }
 
         val local = sidecarLrc(song.path)
-        if (local != null) {
-            try {
-                cached.writeText(local)
-            } catch (_: Exception) {
+        if (!local.isNullOrBlank()) {
+            val lines = LrclibClient.toLines(local)
+            if (lines.isNotEmpty()) {
+                try {
+                    cached.writeText(local)
+                } catch (_: Exception) {
+                }
+                return lines
             }
-            return LrcParser.parse(local)
         }
         return emptyList()
     }
@@ -41,8 +47,9 @@ object LyricsRepository {
     private fun sidecarLrc(path: String): String? {
         if (path.isBlank()) return null
         val audio = File(path)
-        val lrc = File(audio.parentFile ?: return null, audio.nameWithoutExtension + ".lrc")
-        return if (lrc.exists()) {
+        val parent = audio.parentFile ?: return null
+        val lrc = File(parent, audio.nameWithoutExtension + ".lrc")
+        return if (lrc.canRead()) {
             try {
                 lrc.readText()
             } catch (_: Exception) {
@@ -53,7 +60,7 @@ object LyricsRepository {
 
     private fun cacheFile(context: Context, song: Song): File {
         val dir = File(context.filesDir, "lyrics_cache").apply { mkdirs() }
-        val key = md5("${song.artist}|${song.title}|${song.durationMs}")
+        val key = md5("${song.artist.lowercase()}|${song.title.lowercase()}")
         return File(dir, "$key.lrc")
     }
 
