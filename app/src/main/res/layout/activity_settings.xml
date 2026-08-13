@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/card"
+        app:navigationIcon="@android:drawable/ic_menu_revert"
+        app:title="@string/settings_title"
+        app:titleTextColor="@color/text" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/font_size"
+                android:textColor="@color/text"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvSizeValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/muted" />
+
+            <SeekBar
+                android:id="@+id/seekSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/font_style"
+                android:textColor="@color/text"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rgFont"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
+
+                <RadioButton
+                    android:id="@+id/rbSans"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/font_sans"
+                    android:textColor="@color/text" />
+
+                <RadioButton
+                    android:id="@+id/rbLight"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/font_light"
+                    android:textColor="@color/text" />
+
+                <RadioButton
+                    android:id="@+id/rbSerif"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/font_serif"
+                    android:textColor="@color/text" />
+
+                <RadioButton
+                    android:id="@+id/rbMono"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/font_mono"
+                    android:textColor="@color/text" />
+
+                <RadioButton
+                    android:id="@+id/rbCondensed"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/font_condensed"
+                    android:textColor="@color/text" />
+            </RadioGroup>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/text_color"
+                android:textColor="@color/text"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/colorWhite"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="#FFFFFF" />
+
+                <View
+                    android:id="@+id/colorPink"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="#FF8A80" />
+
+                <View
+                    android:id="@+id/colorPurple"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="#EA80FC" />
+
+                <View
+                    android:id="@+id/colorBlue"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="#8C9EFF" />
+
+                <View
+                    android:id="@+id/colorCyan"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="#84FFFF" />
+
+                <View
+                    android:id="@+id/colorGold"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="#FFF59D" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/anim_style"
+                android:textColor="@color/text"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rgAnim"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
+
+                <RadioButton
+                    android:id="@+id/rbFade"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/anim_fade"
+                    android:textColor="@color/text" />
+
+                <RadioButton
+                    android:id="@+id/rbScale"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/anim_scale"
+                    android:textColor="@color/text" />
+
+                <RadioButton
+                    android:id="@+id/rbSlide"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/anim_slide"
+                    android:textColor="@color/text" />
+            </RadioGroup>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnResetPos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/reset_position" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

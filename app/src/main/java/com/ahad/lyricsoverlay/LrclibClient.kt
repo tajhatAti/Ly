@@ -8,31 +8,30 @@ import java.net.URLEncoder
 
 object LrclibClient {
 
-    fun fetch(title: String, artist: String, durationMs: Long): Pair<String, List<LyricLine>>? {
+    fun fetchRaw(title: String, artist: String, durationMs: Long): String? {
         val q = listOf(artist, title).filter { it.isNotBlank() }.joinToString(" ")
         if (q.isBlank()) return null
-
         val searchUrl =
             "https://lrclib.net/api/search?q=${URLEncoder.encode(q, "UTF-8")}"
         val arr = JSONArray(httpGet(searchUrl) ?: return null)
         if (arr.length() == 0) return null
-
         val picked = pickBest(arr, title, artist, durationMs) ?: return null
         val synced = picked.optString("syncedLyrics")
-        if (synced.isNotBlank()) {
-            val lines = LrcParser.parse(synced)
-            if (lines.isNotEmpty()) return titleLine(picked) to lines
-        }
+        if (synced.isNotBlank()) return synced
         val plain = picked.optString("plainLyrics")
-        if (plain.isNotBlank()) {
-            val lines = plain.lineSequence()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .mapIndexed { i, t -> LyricLine(i * 4000L, t) }
-                .toList()
-            if (lines.isNotEmpty()) return titleLine(picked) to lines
-        }
-        return null
+        return plain.takeIf { it.isNotBlank() }
+    }
+
+    fun fetch(title: String, artist: String, durationMs: Long): Pair<String, List<LyricLine>>? {
+        val raw = fetchRaw(title, artist, durationMs) ?: return null
+        val lines = LrcParser.parse(raw)
+        if (lines.isNotEmpty()) return "$artist — $title" to lines
+        val fallback = raw.lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .mapIndexed { i, t -> LyricLine(i * 4000L, t) }
+            .toList()
+        return if (fallback.isEmpty()) null else "$artist — $title" to fallback
     }
 
     private fun titleLine(obj: JSONObject): String {
