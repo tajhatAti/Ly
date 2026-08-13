@@ -3,6 +3,8 @@ package com.ahad.lyricsoverlay
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
+import android.graphics.PorterDuff
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,6 +15,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.ahad.lyricsoverlay.databinding.ActivityMainBinding
 
@@ -20,8 +24,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var adapter: MusicListAdapter
-    private var songs: List<Song> = emptyList()
+    private lateinit var settings: AppSettings
+    private var rawSongs: List<Song> = emptyList()
     private var seekUser = false
+    private var lastSnap: AppSettings.Snap? = null
 
     private val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_AUDIO
@@ -40,19 +46,24 @@ class MainActivity : AppCompatActivity() {
     private val onPlayer = { refreshMini() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        settings = AppSettings.init(this)
+        settings.applyNightMode()
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         adapter = MusicListAdapter { _, index -> playAt(index) }
-        binding.recycler.layoutManager = LinearLayoutManager(this)
         binding.recycler.adapter = adapter
+        applyChrome(settings.snapshot(), animate = false)
 
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
         binding.btnGrant.setOnClickListener { requestPerms() }
         binding.btnOverlay.setOnClickListener { requestOverlay() }
+        binding.btnLayout.setOnClickListener {
+            settings.grid = !settings.grid
+        }
 
         binding.includeMini.btnPlay.setOnClickListener { sendPlayer(PlayerService.ACTION_TOGGLE) }
         binding.includeMini.btnNext.setOnClickListener { sendPlayer(PlayerService.ACTION_NEXT) }
@@ -66,16 +77,20 @@ class MainActivity : AppCompatActivity() {
                 seekUser = false
                 val dur = PlayerState.durationMs.coerceAtLeast(1)
                 val pos = (seekBar?.progress ?: 0) / 1000f * dur
-                val i = Intent(this@MainActivity, PlayerService::class.java)
-                    .setAction(PlayerService.ACTION_SEEK)
-                    .putExtra(PlayerService.EXTRA_POS, pos.toLong())
-                startService(i)
+                startService(
+                    Intent(this@MainActivity, PlayerService::class.java)
+                        .setAction(PlayerService.ACTION_SEEK)
+                        .putExtra(PlayerService.EXTRA_POS, pos.toLong())
+                )
             }
         })
 
-        if (hasStorage()) {
-            loadLibrary()
-        } else {
+        settings.live.observe(this) { snap ->
+            applyChrome(snap, animate = lastSnap != null)
+            lastSnap = snap
+        }
+
+        if (hasStorage()) loadLibrary() else {
             binding.empty.visibility = View.VISIBLE
             binding.btnGrant.visibility = View.VISIBLE
             requestPerms()
@@ -86,12 +101,57 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         PlayerState.addListener(onPlayer)
         refreshMini()
-        if (hasStorage() && songs.isEmpty()) loadLibrary()
+        if (hasStorage() && rawSongs.isEmpty()) loadLibrary()
     }
 
     override fun onPause() {
         PlayerState.removeListener(onPlayer)
         super.onPause()
+    }
+
+    private fun applyChrome(snap: AppSettings.Snap, animate: Boolean) {
+        val apply = {
+            val state = binding.recycler.layoutManager?.onSaveInstanceState()
+            if (snap.grid) {
+                binding.recycler.layoutManager = GridLayoutManager(this, snap.gridSpan)
+            } else {
+                binding.recycler.layoutManager = LinearLayoutManager(this)
+            }
+            adapter.applyChrome(snap.grid, snap.cardStyle, snap.accent, settings.typeface())
+            adapter.titleColor = ContextCompat.getColor(this, R.color.text)
+            adapter.mutedColor = ContextCompat.getColor(this, R.color.muted)
+            showSorted()
+            binding.recycler.layoutManager?.onRestoreInstanceState(state)
+            tintAccent(snap.accent)
+            val tf = settings.typeface()
+            binding.tvTitle.typeface = tf
+            binding.tvCount.typeface = tf
+            binding.empty.typeface = tf
+            binding.includeMini.tvMiniTitle.typeface = tf
+            binding.includeMini.tvMiniArtist.typeface = tf
+        }
+        if (animate) {
+            binding.recycler.animate().alpha(0f).setDuration(120).withEndAction {
+                apply()
+                binding.recycler.animate().alpha(1f).setDuration(160).start()
+            }.start()
+        } else {
+            apply()
+        }
+    }
+
+    private fun tintAccent(accent: Int) {
+        binding.btnLayout.setColorFilter(accent, PorterDuff.Mode.SRC_IN)
+        binding.btnOverlay.setColorFilter(accent, PorterDuff.Mode.SRC_IN)
+        binding.btnSettings.setColorFilter(accent, PorterDuff.Mode.SRC_IN)
+        binding.btnGrant.backgroundTintList = ColorStateList.valueOf(accent)
+        binding.includeMini.btnPlay.setColorFilter(accent, PorterDuff.Mode.SRC_IN)
+        binding.includeMini.seekBar.progressTintList = ColorStateList.valueOf(accent)
+        binding.includeMini.seekBar.thumbTintList = ColorStateList.valueOf(accent)
+        val cardTint = ColorUtils.setAlphaComponent(accent, 40)
+        binding.includeMini.root.setCardBackgroundColor(
+            ColorUtils.compositeColors(cardTint, ContextCompat.getColor(this, R.color.mini))
+        )
     }
 
     private fun hasStorage(): Boolean {
@@ -113,19 +173,14 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.overlay_on, Toast.LENGTH_SHORT).show()
         } else {
             overlayLauncher.launch(
-                Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:$packageName")
-                )
+                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
             )
         }
     }
 
     private fun maybeStartOverlay() {
         if (!Settings.canDrawOverlays(this)) return
-        if (PlayerState.song != null) {
-            sendPlayer(PlayerService.ACTION_RESUME)
-        }
+        if (PlayerState.song != null) sendPlayer(PlayerService.ACTION_RESUME)
     }
 
     private fun loadLibrary() {
@@ -134,15 +189,22 @@ class MainActivity : AppCompatActivity() {
             binding.btnGrant.visibility = View.VISIBLE
             return
         }
-        songs = MusicScannerUtil.scan(this)
-        adapter.submit(songs)
-        binding.empty.visibility = if (songs.isEmpty()) View.VISIBLE else View.GONE
+        rawSongs = MusicScannerUtil.scan(this)
+        showSorted()
         binding.btnGrant.visibility = View.GONE
-        binding.tvCount.text = getString(R.string.song_count, songs.size)
+    }
+
+    private fun showSorted() {
+        val sorted = MusicScannerUtil.sort(rawSongs, settings.sort)
+        adapter.submit(sorted)
+        binding.empty.visibility = if (sorted.isEmpty() && hasStorage()) View.VISIBLE else View.GONE
+        if (!hasStorage()) binding.empty.visibility = View.VISIBLE
+        binding.tvCount.text = getString(R.string.song_count, sorted.size)
     }
 
     private fun playAt(index: Int) {
-        PlayerService.pendingQueue = songs
+        val list = adapter.songs()
+        PlayerService.pendingQueue = list
         val i = Intent(this, PlayerService::class.java)
             .setAction(PlayerService.ACTION_PLAY_INDEX)
             .putExtra(PlayerService.EXTRA_INDEX, index)

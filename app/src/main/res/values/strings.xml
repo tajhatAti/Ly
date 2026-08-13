@@ -25,4 +25,25 @@
     <string name="anim_scale">Fade + scale</string>
     <string name="anim_slide">Slide</string>
     <string name="reset_position">Reset overlay position</string>
+    <string name="layout_toggle">List or grid</string>
+    <string name="home_look">Home screen</string>
+    <string name="theme_mode">Theme</string>
+    <string name="theme_system">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="accent_color">Accent color</string>
+    <string name="custom_color">Custom accent (RGB)</string>
+    <string name="card_style">Song row style</string>
+    <string name="card_flat">Flat minimal</string>
+    <string name="card_rounded">Rounded cards</string>
+    <string name="card_compact">Compact dense</string>
+    <string name="sort_order">Sort songs</string>
+    <string name="sort_title">Title A–Z</string>
+    <string name="sort_artist">Artist A–Z</string>
+    <string name="sort_date">Date added (newest)</string>
+    <string name="sort_duration">Duration (longest)</string>
+    <string name="grid_span">Grid columns</string>
+    <string name="app_font">App font</string>
+    <string name="font_black">Sans black</string>
+    <string name="overlay_section">Lyrics overlay</string>
 </resources>

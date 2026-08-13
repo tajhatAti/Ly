@@ -15,7 +15,7 @@
         android:textColor="@color/text"
         android:textSize="26sp"
         android:textStyle="bold"
-        app:layout_constraintEnd_toStartOf="@id/btnOverlay"
+        app:layout_constraintEnd_toStartOf="@id/btnLayout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -27,9 +27,21 @@
         android:layout_marginTop="2dp"
         android:textColor="@color/muted"
         android:textSize="13sp"
-        app:layout_constraintEnd_toStartOf="@id/btnOverlay"
+        app:layout_constraintEnd_toStartOf="@id/btnLayout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvTitle" />
+
+    <ImageButton
+        android:id="@+id/btnLayout"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/layout_toggle"
+        android:src="@android:drawable/ic_dialog_dialer"
+        app:layout_constraintBottom_toBottomOf="@id/tvCount"
+        app:layout_constraintEnd_toStartOf="@id/btnOverlay"
+        app:layout_constraintTop_toTopOf="@id/tvTitle"
+        app:tint="@color/accent" />
 
     <ImageButton
         android:id="@+id/btnOverlay"

@@ -17,16 +17,16 @@ object MusicScannerUtil {
             MediaStore.Audio.Media.ALBUM_ID,
             MediaStore.Audio.Media.DATA,
             MediaStore.Audio.Media.IS_MUSIC,
-            MediaStore.Audio.Media.DISPLAY_NAME
+            MediaStore.Audio.Media.DISPLAY_NAME,
+            MediaStore.Audio.Media.DATE_ADDED
         )
-        val sort = "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC"
         val cursor = try {
             context.contentResolver.query(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 projection,
                 null,
                 null,
-                sort
+                null
             )
         } catch (_: SecurityException) {
             null
@@ -41,6 +41,7 @@ object MusicScannerUtil {
             val dataCol = c.getColumnIndex(MediaStore.Audio.Media.DATA)
             val musicCol = c.getColumnIndex(MediaStore.Audio.Media.IS_MUSIC)
             val nameCol = c.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME)
+            val dateCol = c.getColumnIndex(MediaStore.Audio.Media.DATE_ADDED)
             while (c.moveToNext()) {
                 if (musicCol >= 0 && c.getInt(musicCol) == 0) continue
                 val path = if (dataCol >= 0) c.getString(dataCol).orEmpty() else ""
@@ -58,11 +59,23 @@ object MusicScannerUtil {
                     durationMs = c.getLong(durCol).coerceAtLeast(0L),
                     albumId = c.getLong(albumCol),
                     path = path,
+                    dateAdded = if (dateCol >= 0) c.getLong(dateCol) else 0L,
                     contentUri = Song.mediaUri(id)
                 )
             }
         }
         return songs
+    }
+
+    fun sort(songs: List<Song>, mode: String): List<Song> {
+        return when (mode) {
+            AppSettings.SORT_ARTIST -> songs.sortedWith(
+                compareBy(String.CASE_INSENSITIVE_ORDER) { it.artist }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
+            )
+            AppSettings.SORT_DATE -> songs.sortedByDescending { it.dateAdded }
+            AppSettings.SORT_DURATION -> songs.sortedByDescending { it.durationMs }
+            else -> songs.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+        }
     }
 
     fun formatDuration(ms: Long): String {
